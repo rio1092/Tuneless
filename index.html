@@ -69,6 +69,7 @@ button:disabled{opacity:.5;cursor:default}
 </div>
 <script>
 // Clip length in seconds for each of the 7 tries. Edit to tune difficulty.
+const START=2; // skip the preview's fade-in so the first notes are audible
 const LV={basic:[.3,.6,1,1.6,2.4,3.5,6],hard:[.2,.4,.7,1.1,1.8,3]};
 const E=[['70s','1970s'],['80s','1980s'],['90s','1990s'],['00s','2000s'],['10s','2010s'],['20s','Today']];
 // Format: "Artist=Song/Song/Song". Add more freely – more songs per artist = harder.
@@ -146,13 +147,13 @@ async function loadSong(){
     }
   }catch(e){if(id!==loadId)return;err='Could not reach the iTunes API ('+e.message+'). Open this file from your computer (not inside Claude), and try disabling ad blockers or VPNs.'}
   if(id!==loadId)return;
-  if(meta){aud=new Audio();aud.setAttribute('playsinline','');aud.setAttribute('webkit-playsinline','');aud.preload='auto';aud.src=meta.previewUrl;aud.load();ART[T[era][idx]]=meta.artworkUrl100}
+  if(meta){aud=new Audio();aud.setAttribute('playsinline','');aud.setAttribute('webkit-playsinline','');aud.preload='auto';aud.src=meta.previewUrl.replace(/^http:/,'https:');aud.load();ART[T[era][idx]]=meta.artworkUrl100}
   else if(!err)err='No previews found for this era.';
   restore();$('q').value='';$('sug').innerHTML='';render();
 }
 function stopA(){clearTimeout(tm);if(aud)aud.pause();const b=$('bar');b.style.transition='none';b.style.width='0';$('play').textContent='▶'}
 function play(){
-  if(!aud)return;stopA();aud.currentTime=0;
+  if(!aud)return;stopA();try{aud.currentTime=done?0:START}catch(e){}
   aud.play().then(()=>{
     const s=secs(),b=$('bar');b.style.transition='none';b.style.width='0';void b.offsetWidth;
     b.style.transition='width '+s+'s linear';b.style.width='100%';$('play').textContent='■';
