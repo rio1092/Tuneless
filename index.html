@@ -96,13 +96,14 @@ function hash(s){let h=7;for(const c of s)h=(h*31+c.charCodeAt(0))>>>0;return h}
 let S={days:{},st:{p:0,w:0,s:0,b:0}},ART={};
 try{const r=localStorage.getItem('tuneless-real2');if(r)S=JSON.parse(r)}catch(e){}
 try{ART=JSON.parse(localStorage.getItem('tl-art')||'{}')}catch(e){}
+let MC={};try{MC=JSON.parse(localStorage.getItem('tl-meta')||'{}')}catch(e){}
 const save=()=>{try{localStorage.setItem('tuneless-real2',JSON.stringify(S))}catch(e){}};
 const d0=new Date(),dayKey=d0.getFullYear()+'-'+(d0.getMonth()+1)+'-'+d0.getDate();
 let era='80s',mode='daily',lvl='basic',idx=0,meta=null,att=[],done=false,won=false,aud=null,tm,sugT,loadId=0,err='';
 const N=()=>LV[lvl].length,secs=()=>done?30:LV[lvl][Math.min(att.length,N()-1)],dk=()=>dayKey+era+lvl;
 
 async function api(url){
-  try{const r=await fetch(url);if(!r.ok)throw new Error('HTTP '+r.status);return await r.json()}
+  try{const ctl=new AbortController(),tt=setTimeout(()=>ctl.abort(),8000);const r=await fetch(url,{signal:ctl.signal});clearTimeout(tt);if(!r.ok)throw new Error('HTTP '+r.status);return await r.json()}
   catch(e1){
     return new Promise((res,rej)=>{
       const cb='itcb'+Date.now()+Math.floor(Math.random()*1e4),s=document.createElement('script');
@@ -115,10 +116,13 @@ async function api(url){
   }
 }
 async function lookup(entry){
+  if(MC[entry])return MC[entry];
   const [t,a]=entry.split('|');
   const j=await api('https://itunes.apple.com/search?media=music&entity=song&limit=10&term='+encodeURIComponent(t+' '+a)),nt=norm(t),na=norm(a);
   const ok=(j.results||[]).filter(x=>x.previewUrl&&norm(x.trackName).includes(nt)&&!/karaoke|tribute|made famous|cover/i.test(x.trackName+x.collectionName));
-  return ok.find(x=>norm(x.artistName).includes(na))||null;
+  const hit=ok.find(x=>norm(x.artistName).includes(na))||null;
+  if(hit){MC[entry]={previewUrl:hit.previewUrl,artworkUrl100:hit.artworkUrl100};try{localStorage.setItem('tl-meta',JSON.stringify(MC))}catch(e){}}
+  return hit;
 }
 const artistDone=new Set();
 async function fetchArt(artist){
@@ -141,11 +145,11 @@ async function loadSong(){
   const L=T[era],start=mode==='daily'?hash(dayKey+era)%L.length:Math.floor(Math.random()*L.length);
   try{
     for(let i=0;i<L.length;i++){
-      const k=(start+i)%L.length,m=await lookup(L[k]);
+      const k=(start+i)%L.length;let m;try{m=await lookup(L[k])}catch(e){await new Promise(z=>setTimeout(z,1500));m=await lookup(L[k])}
       if(id!==loadId)return;
       if(m){idx=k;meta=m;break}
     }
-  }catch(e){if(id!==loadId)return;err='Could not reach the iTunes API ('+e.message+'). Open this file from your computer (not inside Claude), and try disabling ad blockers or VPNs.'}
+  }catch(e){if(id!==loadId)return;err='Could not reach the iTunes API ('+e.message+'). Check your connection, turn off any VPN, iCloud Private Relay or content blocker, then tap Try again.'}
   if(id!==loadId)return;
   if(meta){aud=new Audio();aud.setAttribute('playsinline','');aud.setAttribute('webkit-playsinline','');aud.preload='auto';aud.src=meta.previewUrl.replace(/^http:/,'https:');aud.load();ART[T[era][idx]]=meta.artworkUrl100}
   else if(!err)err='No previews found for this era.';
@@ -189,7 +193,7 @@ function render(){
   $('info').textContent=err?err:!meta?'Loading song…':done?'Full 30s preview':'Clip '+Math.min(att.length+1,N())+'/'+N()+' · '+secs()+'s of audio';
   $('ctl').style.display=done||!meta?'none':'block';
   $('after').style.display=(done||mode==='prac'||err)&&(meta||err)?'flex':'none';
-  $('next').style.display=mode==='prac'||err?'':'none';
+  $('next').style.display=mode==='prac'||err?'':'none';$('next').textContent=err?'Try again':'New song';
   $('share').style.display=done?'':'none';
   $('res').textContent=done?(won?'🎉 Got it in '+att.length+'! ':'It was ')+lab(T[era][idx]):'';
   $('res').style.color=done&&won?'var(--ok)':'var(--ink)';
