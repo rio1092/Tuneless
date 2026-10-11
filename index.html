@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Tuneless">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0d1410">
+<title>Tuneless – Real Songs</title>
+<style>
+:root{--bg:#f4f7f5;--card:#fff;--ink:#14201a;--mut:#667a70;--ac:#16a85a;--ok:#16a85a;--onac:#04140b;--bad:#d64545;--line:#d5dfd9}
+@media(prefers-color-scheme:dark){:root{--bg:#0d1410;--card:#16211b;--ink:#e8f1ec;--mut:#8fa59a;--ac:#3ddc84;--bad:#ef6a6a;--line:#273a30;--ok:#3ddc84}}
+body.hard{--bg:#faf3f3;--ac:#d93a3a;--onac:#fff;--line:#e3d0d0;--mut:#7d6666}
+@media(prefers-color-scheme:dark){body.hard{--bg:#140d0d;--card:#211616;--ac:#ff5a5a;--onac:#1a0606;--line:#3a2727;--mut:#a58f8f}}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.4 system-ui,-apple-system,"Segoe UI",sans-serif}
+#app{max-width:520px;margin:0 auto;padding:calc(16px + env(safe-area-inset-top,0px)) calc(16px + env(safe-area-inset-right,0px)) calc(16px + env(safe-area-inset-bottom,0px)) calc(16px + env(safe-area-inset-left,0px))}
+h1{margin:4px 0 2px;font-size:28px;text-align:center}
+.sub{text-align:center;color:var(--mut);font-size:14px;margin-bottom:14px}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}.row.c{justify-content:center}
+button{-webkit-appearance:none;appearance:none;touch-action:manipulation;font:inherit;border:1px solid var(--line);background:var(--card);color:var(--ink);padding:8px 12px;border-radius:10px;cursor:pointer}
+button.on{background:var(--ac);color:var(--onac);border-color:var(--ac);font-weight:700}
+button:disabled{opacity:.5;cursor:default}
+.era{flex:1 1 30%;text-align:center}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px}
+.att{display:flex;flex-direction:column;gap:6px}
+.a{border:1px solid var(--line);border-radius:8px;padding:8px 10px;min-height:38px;font-size:14px;color:var(--mut)}
+.a.cur{border-color:var(--ac)}.a.x{color:var(--bad);border-color:var(--bad)}.a.s{font-style:italic}.a.w{color:var(--ok);border-color:var(--ok);font-weight:700}
+#play{width:64px;height:64px;border-radius:50%;font-size:26px;background:var(--ac);color:var(--onac);border:0;flex:none}
+.pl{display:flex;align-items:center;gap:14px}.bw{flex:1}
+.bar{height:8px;background:var(--line);border-radius:6px;overflow:hidden}
+#bar{height:100%;width:0;background:var(--ac)}
+#info{font-size:13px;color:var(--mut);margin-top:6px}
+#q{-webkit-appearance:none;appearance:none;width:100%;font:inherit;font-size:16px;padding:11px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
+#sug{display:flex;flex-direction:column;gap:4px;margin:6px 0}
+.sg{display:flex;align-items:center;gap:10px;text-align:left}
+.th{width:36px;height:36px;border-radius:6px;background:var(--line) center/cover;display:flex;align-items:center;justify-content:center;flex:none;font-size:16px}
+#res{text-align:center;font-weight:600;min-height:24px;margin:6px 0}
+#cover{display:block;margin:8px auto;width:110px;height:110px;border-radius:10px}
+.st{display:flex;justify-content:space-around;text-align:center;font-size:13px;color:var(--mut)}
+.st b{display:block;font-size:22px;color:var(--ink)}
+.foot{text-align:center;font-size:12px;color:var(--mut)}
+</style>
+</head>
+<body>
+<div id="app">
+  <h1>🎵 Tuneless</h1>
+  <div class="sub" id="sub"></div>
+  <div class="row" id="eras"></div>
+  <div class="row c"><button id="mDaily" class="on">Daily</button><button id="mPrac">Practice</button><span style="width:14px"></span><button id="lBasic" class="on">Basic</button><button id="lHard">Hard</button></div>
+  <div class="card">
+    <div class="pl"><button id="play" aria-label="Play" disabled>▶</button>
+      <div class="bw"><div class="bar"><div id="bar"></div></div><div id="info">Loading song…</div></div></div>
+  </div>
+  <div class="card att" id="att"></div>
+  <div id="ctl">
+    <input id="q" placeholder="Search for a song or artist…" autocomplete="off">
+    <div id="sug"></div>
+    <div class="row"><button id="skip" style="flex:1">Skip</button><button id="guess" class="on" style="flex:2">Guess</button></div>
+  </div>
+  <div id="res"></div>
+  <img id="cover" alt="" style="display:none">
+  <div class="row c" id="after" style="display:none"><button id="share">Share result</button><button id="next">New song</button></div>
+  <div class="card st" id="stats"></div>
+  <div class="foot">Song previews provided by the iTunes Search API. Needs an internet connection.</div>
+</div>
+<script>
+// Clip length in seconds for each of the 7 tries. Edit to tune difficulty.
+const LV={basic:[.3,.6,1,1.6,2.4,3.5,6],hard:[.2,.4,.7,1.1,1.8,3]};
+const E=[['70s','1970s'],['80s','1980s'],['90s','1990s'],['00s','2000s'],['10s','2010s'],['20s','Today']];
+// Format: "Artist=Song/Song/Song". Add more freely – more songs per artist = harder.
+const RAW={
+'70s':["ABBA=Dancing Queen/Mamma Mia/Waterloo/Take a Chance on Me/Super Trouper","Bee Gees=Stayin' Alive/Night Fever/Jive Talkin'/How Deep Is Your Love","Eagles=Hotel California/Take It Easy/Lyin' Eyes","Queen=Bohemian Rhapsody/Somebody to Love/Killer Queen/We Will Rock You","Stevie Wonder=Superstition/Sir Duke/Isn't She Lovely","Fleetwood Mac=Go Your Own Way/Dreams/Rhiannon","Chic=Le Freak/Good Times","Earth, Wind & Fire=September/Boogie Wonderland/Shining Star","Led Zeppelin=Stairway to Heaven/Whole Lotta Love/Black Dog","Donna Summer=Hot Stuff/I Feel Love","Elton John=Rocket Man/Tiny Dancer/Crocodile Rock","David Bowie=Heroes/Starman/Rebel Rebel","Blondie=Heart of Glass","Gloria Gaynor=I Will Survive","John Lennon=Imagine"],
+'80s':["Michael Jackson=Billie Jean/Beat It/Thriller/Smooth Criminal/Wanna Be Startin' Somethin'","Prince=Purple Rain/When Doves Cry/Kiss/1999","Madonna=Like a Prayer/Material Girl/Like a Virgin","Queen=Another One Bites the Dust/Under Pressure/I Want to Break Free","Bon Jovi=Livin' on a Prayer/You Give Love a Bad Name/Wanted Dead or Alive","Journey=Don't Stop Believin'/Separate Ways (Worlds Apart)","Toto=Africa/Rosanna","The Police=Every Breath You Take/King of Pain","Wham!=Wake Me Up Before You Go-Go/Last Christmas/Careless Whisper","Whitney Houston=I Wanna Dance with Somebody/How Will I Know","U2=With or Without You/Where the Streets Have No Name","Duran Duran=Hungry Like the Wolf/Rio","Guns N' Roses=Sweet Child o' Mine/Paradise City","Eurythmics=Sweet Dreams (Are Made of This)/Here Comes the Rain Again","Cyndi Lauper=Girls Just Want to Have Fun/Time After Time","a-ha=Take On Me","Soft Cell=Tainted Love"],
+'90s':["Nirvana=Smells Like Teen Spirit/Come as You Are/Lithium","Oasis=Wonderwall/Don't Look Back in Anger/Champagne Supernova","Spice Girls=Wannabe/Spice Up Your Life/2 Become 1","Backstreet Boys=I Want It That Way/Everybody (Backstreet's Back)/As Long as You Love Me","*NSYNC=I Want You Back/Tearin' Up My Heart","TLC=No Scrubs/Waterfalls/Creep","Radiohead=Creep/Karma Police/No Surprises","R.E.M.=Losing My Religion/Everybody Hurts","Alanis Morissette=You Oughta Know/Ironic/Hand in My Pocket","Green Day=Basket Case/Good Riddance (Time of Your Life)","Red Hot Chili Peppers=Under the Bridge/Scar Tissue/Californication","Mariah Carey=Fantasy/Hero/Always Be My Baby","Celine Dion=My Heart Will Go On/Because You Loved Me","Whitney Houston=I Will Always Love You","Britney Spears=...Baby One More Time","Coolio=Gangsta's Paradise","Counting Crows=Mr. Jones","Natalie Imbruglia=Torn"],
+'00s':["The Killers=Mr. Brightside/Somebody Told Me/When You Were Young","Beyonce=Crazy in Love/Single Ladies (Put a Ring on It)/Halo","OutKast=Hey Ya!/Roses","Eminem=Lose Yourself/The Real Slim Shady/Without Me","Usher=Yeah!/Burn/Confessions Part II","Rihanna=Umbrella/Don't Stop the Music/Disturbia","Coldplay=Viva la Vida/Clocks/Yellow/Fix You","Kelly Clarkson=Since U Been Gone/Behind These Hazel Eyes","Britney Spears=Toxic/Oops!... I Did It Again/Gimme More","Kings of Leon=Use Somebody/Sex on Fire","Amy Winehouse=Rehab/Back to Black","Green Day=American Idiot/Boulevard of Broken Dreams","Linkin Park=In the End/Numb/Crawling","Lady Gaga=Poker Face/Just Dance/Bad Romance","Black Eyed Peas=I Gotta Feeling/Boom Boom Pow/Where Is the Love?","Avril Lavigne=Complicated/Sk8er Boi","Justin Timberlake=Cry Me a River/SexyBack/Rock Your Body","The White Stripes=Seven Nation Army"],
+'10s':["Adele=Rolling in the Deep/Someone Like You/Hello/Set Fire to the Rain","Taylor Swift=Shake It Off/Blank Space/Bad Blood/We Are Never Ever Getting Back Together","The Weeknd=Blinding Lights/Can't Feel My Face/Starboy/Save Your Tears","Ed Sheeran=Shape of You/Thinking Out Loud/Perfect","Imagine Dragons=Radioactive/Demons/Believer/Thunder","Bruno Mars=Locked Out of Heaven/Just the Way You Are/Treasure","Katy Perry=Firework/Roar/Dark Horse","Ariana Grande=Thank U, Next/7 rings/Problem","Post Malone=Circles/Sunflower/Rockstar","Drake=Hotline Bling/One Dance/God's Plan","Maroon 5=Sugar/Moves Like Jagger/Girls Like You","Billie Eilish=bad guy/Ocean Eyes/when the party's over","Lorde=Royals/Team","Mark Ronson=Uptown Funk","Pharrell Williams=Happy","Gotye=Somebody That I Used to Know","Daft Punk=Get Lucky","Lil Nas X=Old Town Road","Lady Gaga=Shallow"],
+'20s':["Taylor Swift=Anti-Hero/Cruel Summer/Cardigan/Lavender Haze/Fortnight","Dua Lipa=Levitating/Houdini/Don't Start Now/Dance the Night","Olivia Rodrigo=drivers license/good 4 u/vampire/deja vu","Sabrina Carpenter=Espresso/Please Please Please/Taste/Nonsense","SZA=Kill Bill/Snooze/Good Days","Tate McRae=Greedy/Exes/It's ok I'm ok","Billie Eilish=What Was I Made For?/BIRDS OF A FEATHER/LUNCH","Chappell Roan=Good Luck, Babe!/Pink Pony Club/Hot To Go!","Harry Styles=As It Was/Watermelon Sugar/Late Night Talking","Doja Cat=Say So/Paint The Town Red/Woman","Kendrick Lamar=Not Like Us/Luther","Miley Cyrus=Flowers","Lady Gaga=Die With A Smile","Benson Boone=Beautiful Things","Tyla=Water","Teddy Swims=Lose Control"]};
+const MORE={
+'70s':["The Rolling Stones=Miss You/Angie/Brown Sugar","Pink Floyd=Another Brick in the Wall, Pt. 2/Money/Wish You Were Here/Comfortably Numb","Aerosmith=Dream On/Walk This Way/Sweet Emotion","Lynyrd Skynyrd=Sweet Home Alabama/Free Bird","Boston=More Than a Feeling","Kansas=Carry On Wayward Son/Dust in the Wind","Steely Dan=Reeling in the Years/Do It Again/Peg","Fleetwood Mac=The Chain/Don't Stop/Landslide","Eagles=Desperado/One of These Nights/Life in the Fast Lane","Bob Marley & The Wailers=No Woman, No Cry/Is This Love/Jamming/Three Little Birds","Billy Joel=Piano Man/Just the Way You Are/Only the Good Die Young/My Life","Paul Simon=Kodachrome/50 Ways to Leave Your Lover","The Carpenters=Close to You/Top of the World/Yesterday Once More","Bill Withers=Lean on Me/Ain't No Sunshine/Lovely Day","Marvin Gaye=What's Going On/Let's Get It On","Barry White=Can't Get Enough of Your Love, Babe","Sister Sledge=We Are Family","Village People=Y.M.C.A./In the Navy","Boney M.=Rasputin/Daddy Cool/Rivers of Babylon","Rod Stewart=Maggie May/Da Ya Think I'm Sexy?/Tonight's the Night","Bruce Springsteen=Born to Run/Thunder Road","Cat Stevens=Wild World/Father and Son/Moon Shadow","Don McLean=American Pie","Carly Simon=You're So Vain","Supertramp=The Logical Song/Breakfast in America/Take the Long Way Home","Electric Light Orchestra=Mr. Blue Sky/Don't Bring Me Down/Evil Woman","Heart=Barracuda/Crazy on You","Foreigner=Cold as Ice/Feels Like the First Time/Hot Blooded","Styx=Come Sail Away/Renegade","Deep Purple=Smoke on the Water/Highway Star","Black Sabbath=Paranoid/Iron Man","The Clash=London Calling","Talking Heads=Psycho Killer/Take Me to the River","The Jackson 5=I Want You Back/ABC/I'll Be There","Commodores=Easy/Three Times a Lady/Brick House","The Doobie Brothers=Listen to the Music/Long Train Runnin'/What a Fool Believes","Elton John=Bennie and the Jets/Your Song/Don't Go Breaking My Heart/Goodbye Yellow Brick Road","Queen=Love of My Life/You're My Best Friend","ABBA=Fernando/Knowing Me, Knowing You/The Winner Takes It All/Does Your Mother Know","Bee Gees=More Than a Woman/Tragedy","Donna Summer=Bad Girls/Last Dance/MacArthur Park","Stevie Wonder=Higher Ground/I Wish/Living for the City","David Bowie=Changes/Fame/Life on Mars?/Ziggy Stardust","Blondie=One Way or Another"],
+'80s':["Michael Jackson=Human Nature/Rock with You/Bad/The Way You Make Me Feel/Man in the Mirror","Prince=Little Red Corvette/Raspberry Beret/Let's Go Crazy","Madonna=Papa Don't Preach/La Isla Bonita/Borderline/Lucky Star/Into the Groove/Crazy for You","Whitney Houston=Greatest Love of All/Saving All My Love for You/So Emotional","U2=I Still Haven't Found What I'm Looking For/Sunday Bloody Sunday/Pride (In the Name of Love)/New Year's Day","Bon Jovi=Bad Medicine/Born to Be My Baby","Journey=Open Arms/Faithfully/Any Way You Want It/Lights","Def Leppard=Pour Some Sugar on Me/Photograph/Love Bites/Hysteria","Van Halen=Jump/Panama/Hot for Teacher/Why Can't This Be Love","Bruce Springsteen=Dancing in the Dark/Born in the U.S.A./Glory Days","Phil Collins=In the Air Tonight/Against All Odds (Take a Look at Me Now)/Sussudio/One More Night","Genesis=Invisible Touch/Land of Confusion/That's All","Billy Joel=We Didn't Start the Fire/Uptown Girl/Tell Her About It","Lionel Richie=Hello/All Night Long (All Night)/Dancing on the Ceiling/Say You, Say Me","Stevie Wonder=I Just Called to Say I Love You/Part-Time Lover","Tina Turner=What's Love Got to Do with It/The Best/Private Dancer","Cyndi Lauper=True Colors/She Bop","Pat Benatar=Love Is a Battlefield/Hit Me with Your Best Shot/Heartbreaker","Bonnie Tyler=Total Eclipse of the Heart/Holding Out for a Hero","Culture Club=Karma Chameleon/Do You Really Want to Hurt Me","Spandau Ballet=True/Gold","Tears for Fears=Everybody Wants to Rule the World/Shout/Head over Heels/Mad World","The Cure=Just Like Heaven/Lovesong/Boys Don't Cry/In Between Days","Depeche Mode=Just Can't Get Enough/Personal Jesus/People Are People/Everything Counts","New Order=Blue Monday/Bizarre Love Triangle","The Smiths=This Charming Man/How Soon Is Now?","Pet Shop Boys=West End Girls/It's a Sin/Always on My Mind","The Human League=Don't You Want Me","Hall & Oates=Maneater/Out of Touch/Kiss on My List/Private Eyes/You Make My Dreams","Kenny Loggins=Footloose/Danger Zone","Survivor=Eye of the Tiger","Foreigner=I Want to Know What Love Is/Waiting for a Girl Like You/Urgent","Starship=We Built This City/Nothing's Gonna Stop Us Now","Heart=Alone/What About Love/These Dreams","Europe=The Final Countdown","Dire Straits=Money for Nothing/Walk of Life/Brothers in Arms","Simple Minds=Don't You (Forget About Me)","Rick Astley=Never Gonna Give You Up/Together Forever","George Michael=Faith/Father Figure/I Want Your Sex","Falco=Rock Me Amadeus","Billy Idol=White Wedding/Rebel Yell/Eyes Without a Face","Joan Jett & the Blackhearts=I Love Rock 'n Roll/Bad Reputation","Run-D.M.C.=Walk This Way/It's Tricky","Beastie Boys=(You Gotta) Fight for Your Right (To Party!)/No Sleep till Brooklyn","Bobby McFerrin=Don't Worry, Be Happy","Roxette=The Look/Listen to Your Heart/It Must Have Been Love","INXS=Need You Tonight/Never Tear Us Apart","Men at Work=Down Under/Who Can It Be Now?","Huey Lewis & The News=The Power of Love/Hip to Be Square/Stuck with You","Bananarama=Cruel Summer/Venus","The Bangles=Walk Like an Egyptian/Eternal Flame/Manic Monday","Salt-N-Pepa=Push It"],
+'90s':["Nirvana=Heart-Shaped Box/In Bloom/All Apologies","Pearl Jam=Alive/Even Flow/Jeremy/Black","Soundgarden=Black Hole Sun/Spoonman","Alice in Chains=Man in the Box/Would?/Rooster","The Smashing Pumpkins=1979/Tonight, Tonight/Bullet with Butterfly Wings/Today","Weezer=Buddy Holly/Say It Ain't So","Foo Fighters=Everlong/My Hero/Big Me/Learn to Fly","Blur=Song 2/Parklife/Girls & Boys/Country House","Pulp=Common People","Radiohead=Fake Plastic Trees/High and Dry/Paranoid Android","The Verve=Bitter Sweet Symphony","Garbage=Stupid Girl/Only Happy When It Rains","No Doubt=Don't Speak/Just a Girl/Spiderwebs","Hootie & the Blowfish=Hold My Hand/Only Wanna Be with You","Sheryl Crow=All I Wanna Do/If It Makes You Happy","Third Eye Blind=Semi-Charmed Life/Jumper","Matchbox Twenty=3AM/Push/Real World","Goo Goo Dolls=Iris/Name","Bush=Glycerine/Comedown","Stone Temple Pilots=Plush/Interstate Love Song","Nine Inch Nails=Closer/Hurt","Rage Against the Machine=Killing in the Name/Bulls on Parade","Metallica=Enter Sandman/Nothing Else Matters/The Unforgiven","Guns N' Roses=November Rain/Don't Cry","Red Hot Chili Peppers=Give It Away/Otherside","Sublime=What I Got/Santeria/Doin' Time","Dave Matthews Band=Crash into Me/Ants Marching/Satellite","The Cranberries=Zombie/Linger/Dreams","The Cardigans=Lovefool","Fugees=Killing Me Softly with His Song/Ready or Not","Lauryn Hill=Doo Wop (That Thing)","The Notorious B.I.G.=Juicy/Hypnotize/Big Poppa/Mo Money Mo Problems","2Pac=California Love/Changes/Dear Mama","Snoop Dogg=Gin and Juice/Who Am I (What's My Name)?","Warren G=Regulate","Will Smith=Gettin' Jiggy wit It/Men in Black/Miami","Aaliyah=Are You That Somebody?/One in a Million","Destiny's Child=Say My Name/Bills, Bills, Bills","Boyz II Men=End of the Road/I'll Make Love to You/On Bended Knee","Janet Jackson=That's the Way Love Goes/Together Again","Mariah Carey=Dreamlover/Emotions/Vision of Love/Honey","Madonna=Vogue/Frozen/Ray of Light/Take a Bow","Ace of Base=The Sign/All That She Wants/Don't Turn Around","Aqua=Barbie Girl","Savage Garden=Truly Madly Deeply/I Want You","Ricky Martin=Livin' la Vida Loca","Santana=Smooth","Shania Twain=Man! I Feel Like a Woman!/That Don't Impress Me Much/You're Still the One","Garth Brooks=Friends in Low Places","Cher=Believe","Seal=Kiss from a Rose/Crazy","Bryan Adams=(Everything I Do) I Do It for You","Vanilla Ice=Ice Ice Baby","MC Hammer=U Can't Touch This","Haddaway=What Is Love","Chumbawamba=Tubthumping","Semisonic=Closing Time","Smash Mouth=All Star/Walkin' on the Sun","Lenny Kravitz=Are You Gonna Go My Way/Fly Away","Spin Doctors=Two Princes","Eiffel 65=Blue (Da Ba Dee)"],
+'00s':["Fall Out Boy=Sugar, We're Goin Down/Dance, Dance/Thnks fr th Mmrs","Paramore=Misery Business/Decode/crushcrushcrush","My Chemical Romance=Welcome to the Black Parade/I'm Not Okay (I Promise)/Helena","Panic! at the Disco=I Write Sins Not Tragedies/Nine in the Afternoon","blink-182=All the Small Things/What's My Age Again?/I Miss You","Simple Plan=Perfect/Welcome to My Life","Evanescence=Bring Me to Life/My Immortal","Nickelback=How You Remind Me/Photograph/Rockstar","Maroon 5=This Love/She Will Be Loved/Harder to Breathe","The Fray=How to Save a Life/Over My Head (Cable Car)","OneRepublic=Apologize/Stop and Stare","Snow Patrol=Chasing Cars/Run","Keane=Somewhere Only We Know/Everybody's Changing","Arctic Monkeys=I Bet You Look Good on the Dancefloor/When the Sun Goes Down","The Strokes=Last Nite/Reptilia/Someday","Yeah Yeah Yeahs=Maps/Heads Will Roll","MGMT=Kids/Electric Feel/Time to Pretend","Franz Ferdinand=Take Me Out","Muse=Starlight/Supermassive Black Hole/Time Is Running Out","Gnarls Barkley=Crazy","Modest Mouse=Float On","Death Cab for Cutie=I Will Follow You into the Dark/Soul Meets Body","John Mayer=Gravity/Your Body Is a Wonderland/Waiting on the World to Change","Norah Jones=Don't Know Why","Alicia Keys=Fallin'/No One/If I Ain't Got You","Kanye West=Gold Digger/Stronger/Heartless/Jesus Walks","JAY-Z=99 Problems/Empire State of Mind","50 Cent=In da Club/Candy Shop/21 Questions","Nelly=Hot in Herre/Dilemma/Ride wit Me","Flo Rida=Low/Right Round","Lil Wayne=Lollipop/A Milli","Akon=Smack That/Lonely","Sean Paul=Get Busy/Temperature","Ne-Yo=So Sick/Closer","Chris Brown=Run It!/Forever/With You","Shakira=Hips Don't Lie/Whenever, Wherever/She Wolf","P!nk=Get the Party Started/Who Knew/So What","Christina Aguilera=Beautiful/Dirrty/Ain't No Other Man","Katy Perry=I Kissed a Girl/Hot n Cold","Taylor Swift=Love Story/You Belong with Me/Teardrops on My Guitar/Our Song","Miley Cyrus=Party in the U.S.A./The Climb","Mariah Carey=We Belong Together/Touch My Body","Gwen Stefani=Hollaback Girl/What You Waiting For?","Fergie=London Bridge/Big Girls Don't Cry/Glamorous","The Pussycat Dolls=Don't Cha/Buttons","Daft Punk=One More Time/Harder, Better, Faster, Stronger","Gorillaz=Feel Good Inc./Clint Eastwood/Dare","Jason Mraz=I'm Yours/The Remedy","Plain White T's=Hey There Delilah","Train=Hey, Soul Sister/Drops of Jupiter","Sean Kingston=Beautiful Girls","Soulja Boy=Crank That (Soulja Boy)"],
+'10s':["Sam Smith=Stay with Me/Too Good at Goodbyes/I'm Not the Only One","Shawn Mendes=Stitches/Treat You Better","Justin Bieber=Sorry/Love Yourself/What Do You Mean?/Baby","One Direction=What Makes You Beautiful/Story of My Life/Drag Me Down","Camila Cabello=Havana/Never Be the Same","Selena Gomez=Good for You/Lose You to Love Me","Charlie Puth=See You Again/Attention/We Don't Talk Anymore","Halsey=Without Me/Bad at Love","Dua Lipa=New Rules/IDGAF","Lizzo=Truth Hurts/Good as Hell","Cardi B=Bodak Yellow/I Like It","Travis Scott=SICKO MODE/goosebumps","Kendrick Lamar=HUMBLE./DNA./Swimming Pools (Drank)/Alright","Childish Gambino=Redbone/This Is America","Macklemore & Ryan Lewis=Thrift Shop/Can't Hold Us/Same Love","Kanye West=All of the Lights/Runaway/Power","Rihanna=We Found Love/Diamonds/Work/Only Girl (In the World)/Stay","Beyonce=Formation/Drunk in Love/Partition/Run the World (Girls)","Lady Gaga=Born This Way/Applause/Million Reasons","Nicki Minaj=Super Bass/Anaconda/Starships","Miley Cyrus=Wrecking Ball/We Can't Stop/Malibu","Meghan Trainor=All About That Bass/Lips Are Movin","Sia=Chandelier/Cheap Thrills/Elastic Heart","Fetty Wap=Trap Queen","Wiz Khalifa=Black and Yellow","Pitbull=Timber/Give Me Everything/International Love","LMFAO=Party Rock Anthem/Sexy and I Know It","Calvin Harris=Summer/This Is What You Came For/Feel So Close","Avicii=Wake Me Up/Levels/Hey Brother","The Chainsmokers=Closer/Don't Let Me Down/Something Just Like This","Zedd=Clarity","Swedish House Mafia=Don't You Worry Child","David Guetta=Titanium/Turn Me On","Major Lazer=Lean On/Cold Water","twenty one pilots=Stressed Out/Ride/Heathens","Fall Out Boy=Centuries/Immortals/Uma Thurman","Panic! at the Disco=High Hopes","Bastille=Pompeii","Mumford & Sons=I Will Wait/Little Lion Man","The Lumineers=Ho Hey","Of Monsters and Men=Little Talks","fun.=We Are Young/Some Nights","Passenger=Let Her Go","Hozier=Take Me to Church","Lana Del Rey=Video Games/Summertime Sadness/Born to Die","Florence + the Machine=Dog Days Are Over/Shake It Out","Arctic Monkeys=Do I Wanna Know?/R U Mine?","Tame Impala=The Less I Know the Better/Let It Happen","Foster the People=Pumped Up Kicks","WALK THE MOON=Shut Up and Dance","Carly Rae Jepsen=Call Me Maybe","Jason Derulo=Talk Dirty/Want to Want Me","Clean Bandit=Rather Be/Rockabye","Luis Fonsi=Despacito"],
+'20s':["The Weeknd=Take My Breath/Out of Time/Die For You/Popular","Ariana Grande=positions/34+35/we can't be friends (wait for your love)/yes, and?","Lizzo=About Damn Time","Lil Nas X=MONTERO (Call Me By Your Name)/INDUSTRY BABY","Jack Harlow=First Class/Lovin on Me","Morgan Wallen=Last Night/Cowgirls/Thinkin' Bout Me","Zach Bryan=Something in the Orange/I Remember Everything","Noah Kahan=Stick Season/Dial Drunk","Hozier=Too Sweet","Shaboozey=A Bar Song (Tipsy)","Post Malone=I Had Some Help/Chemical","Tommy Richman=MILLION DOLLAR BABY","Glass Animals=Heat Waves","Maneskin=Beggin'","Harry Styles=Golden/Adore You/Matilda","Gracie Abrams=That's So True/I Love You, I'm Sorry","Ice Spice=Munch (Feelin' U)","BTS=Dynamite/Butter/Permission to Dance","BLACKPINK=How You Like That/Pink Venom","NewJeans=Super Shy/Ditto","Charli xcx=360/Von dutch/Apple","Ed Sheeran=Bad Habits/Shivers/Eyes Closed","Coldplay=My Universe/Higher Power","Imagine Dragons=Bones/Enemy","Lewis Capaldi=Forget Me/Wish You The Best/Pointless","Mitski=My Love Mine All Mine","Role Model=Sally, When the Wine Runs Out","Lola Young=Messy","Alex Warren=Ordinary","Teddy Swims=Bad Dreams","Miley Cyrus=Used to Be Young","Cardi B=WAP/Up","Megan Thee Stallion=Savage/Hiss","Latto=Big Energy","Drake=Way 2 Sexy/Jimmy Cooks","Travis Scott=FE!N","Metro Boomin=Like That/Creepin'","Burna Boy=Last Last","Rema=Calm Down","Adele=Easy on Me/Oh My God","Lady Gaga=Abracadabra","Silk Sonic=Leave the Door Open/Smokin Out the Window"]};
+for(const k in MORE)RAW[k].push(...MORE[k]);
+const T={};for(const k in RAW){T[k]=[];const seen=new Set();RAW[k].forEach(l=>{const i=l.indexOf('='),a=l.slice(0,i);l.slice(i+1).split('/').forEach(t=>{const e=t+'|'+a;if(!seen.has(e)){seen.add(e);T[k].push(e)}})})}
+const $=id=>document.getElementById(id);
+const lab=s=>s.replace('|',' – ');
+const norm=s=>s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]/g,'');
+function hash(s){let h=7;for(const c of s)h=(h*31+c.charCodeAt(0))>>>0;return h}
+let S={days:{},st:{p:0,w:0,s:0,b:0}},ART={};
+try{const r=localStorage.getItem('tuneless-real2');if(r)S=JSON.parse(r)}catch(e){}
+try{ART=JSON.parse(localStorage.getItem('tl-art')||'{}')}catch(e){}
+const save=()=>{try{localStorage.setItem('tuneless-real2',JSON.stringify(S))}catch(e){}};
+const d0=new Date(),dayKey=d0.getFullYear()+'-'+(d0.getMonth()+1)+'-'+d0.getDate();
+let era='80s',mode='daily',lvl='basic',idx=0,meta=null,att=[],done=false,won=false,aud=null,tm,sugT,loadId=0,err='';
+const N=()=>LV[lvl].length,secs=()=>done?30:LV[lvl][Math.min(att.length,N()-1)],dk=()=>dayKey+era+lvl;
+
+async function api(url){
+  try{const r=await fetch(url);if(!r.ok)throw new Error('HTTP '+r.status);return await r.json()}
+  catch(e1){
+    return new Promise((res,rej)=>{
+      const cb='itcb'+Date.now()+Math.floor(Math.random()*1e4),s=document.createElement('script');
+      const clean=()=>{clearTimeout(to);delete window[cb];s.remove()};
+      const to=setTimeout(()=>{clean();rej(new Error('timed out; first try: '+e1.message))},8000);
+      window[cb]=d=>{clean();res(d)};
+      s.onerror=()=>{clean();rej(new Error('request blocked; first try: '+e1.message))};
+      s.src=url+'&callback='+cb;document.head.appendChild(s);
+    });
+  }
+}
+async function lookup(entry){
+  const [t,a]=entry.split('|');
+  const j=await api('https://itunes.apple.com/search?media=music&entity=song&limit=10&term='+encodeURIComponent(t+' '+a)),nt=norm(t),na=norm(a);
+  const ok=(j.results||[]).filter(x=>x.previewUrl&&norm(x.trackName).includes(nt)&&!/karaoke|tribute|made famous|cover/i.test(x.trackName+x.collectionName));
+  return ok.find(x=>norm(x.artistName).includes(na))||null;
+}
+const artistDone=new Set();
+async function fetchArt(artist){
+  if(artistDone.has(artist))return;artistDone.add(artist);
+  try{
+    const j=await api('https://itunes.apple.com/search?media=music&entity=song&limit=150&attribute=artistTerm&term='+encodeURIComponent(artist)),na=norm(artist);
+    for(const x of j.results||[]){
+      if(!norm(x.artistName).includes(na)||/karaoke|tribute|live/i.test(x.trackName+x.collectionName))continue;
+      for(const k in T)for(const e of T[k]){const [t,a]=e.split('|');if(a===artist&&!ART[e]&&norm(x.trackName).includes(norm(t)))ART[e]=x.artworkUrl100}
+    }
+    try{localStorage.setItem('tl-art',JSON.stringify(ART))}catch(e){}
+  }catch(e){artistDone.delete(artist)}
+}
+function restore(){
+  const sv=S.days[dk()];
+  if(mode==='daily'&&sv&&sv.idx===idx&&sv.att.length<=N()){att=sv.att;done=sv.done;won=sv.won}else{att=[];done=false;won=false}
+}
+async function loadSong(){
+  const id=++loadId;stopA();meta=null;err='';render();
+  const L=T[era],start=mode==='daily'?hash(dayKey+era)%L.length:Math.floor(Math.random()*L.length);
+  try{
+    for(let i=0;i<L.length;i++){
+      const k=(start+i)%L.length,m=await lookup(L[k]);
+      if(id!==loadId)return;
+      if(m){idx=k;meta=m;break}
+    }
+  }catch(e){if(id!==loadId)return;err='Could not reach the iTunes API ('+e.message+'). Open this file from your computer (not inside Claude), and try disabling ad blockers or VPNs.'}
+  if(id!==loadId)return;
+  if(meta){aud=new Audio();aud.setAttribute('playsinline','');aud.setAttribute('webkit-playsinline','');aud.preload='auto';aud.src=meta.previewUrl;aud.load();ART[T[era][idx]]=meta.artworkUrl100}
+  else if(!err)err='No previews found for this era.';
+  restore();$('q').value='';$('sug').innerHTML='';render();
+}
+function stopA(){clearTimeout(tm);if(aud)aud.pause();const b=$('bar');b.style.transition='none';b.style.width='0';$('play').textContent='▶'}
+function play(){
+  if(!aud)return;stopA();aud.currentTime=0;
+  aud.play().then(()=>{
+    const s=secs(),b=$('bar');b.style.transition='none';b.style.width='0';void b.offsetWidth;
+    b.style.transition='width '+s+'s linear';b.style.width='100%';$('play').textContent='■';
+    tm=setTimeout(stopA,s*1000);
+  }).catch(()=>{err='Playback was blocked. Click play again.';render()});
+}
+function confetti(){
+  if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+  const c=document.createElement('canvas');c.style.cssText='position:fixed;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:99';
+  c.width=innerWidth;c.height=innerHeight;document.body.appendChild(c);const g=c.getContext('2d');
+  const cols=['#ff4d6d','#ffd93d','#3ddc84','#4dabf7','#b197fc','#ff922b'],t0=performance.now();
+  const P=Array.from({length:180},(_,i)=>({x:innerWidth*(i%2?.25:.75),y:innerHeight*.5,vx:(Math.random()-.5)*18,vy:-Math.random()*16-4,w:6+Math.random()*6,h:4+Math.random()*5,r:Math.random()*6,vr:(Math.random()-.5)*.4,c:cols[Math.floor(Math.random()*cols.length)]}));
+  (function f(t){const el=t-t0;g.clearRect(0,0,c.width,c.height);
+    P.forEach(p=>{p.vy+=.35;p.vx*=.99;p.x+=p.vx;p.y+=p.vy;p.r+=p.vr;g.save();g.globalAlpha=Math.max(0,1-el/3500);g.translate(p.x,p.y);g.rotate(p.r);g.fillStyle=p.c;g.fillRect(-p.w/2,-p.h/2,p.w,p.h);g.restore()});
+    if(el<3500)requestAnimationFrame(f);else c.remove()})(t0);
+}
+function finish(w){done=true;won=w;
+  if(mode==='daily'){const s=S.st;s.p++;if(w){s.w++;s.s++;s.b=Math.max(s.b,s.s)}else s.s=0;S.days[dk()]={att,done,won,idx};save()}
+  render();play();if(w)confetti()}
+function persist(){if(mode==='daily'&&!done){S.days[dk()]={att,done:false,won:false,idx};save()}}
+function render(){
+  document.body.className=lvl==='hard'?'hard':'';$('sub').textContent='Real songs. Name it in '+N()+' tries – every miss unlocks more audio.';
+  $('eras').innerHTML='';
+  E.forEach(e=>{const b=document.createElement('button');b.className='era'+(e[0]===era?' on':'');b.textContent=e[1];
+    b.onclick=()=>{if(e[0]!==era){era=e[0];loadSong()}};$('eras').appendChild(b)});
+  $('mDaily').className=mode==='daily'?'on':'';$('mPrac').className=mode==='prac'?'on':'';
+  $('lBasic').className=lvl==='basic'?'on':'';$('lHard').className=lvl==='hard'?'on':'';
+  const A=$('att');A.innerHTML='';
+  for(let i=0;i<N();i++){const a=document.createElement('div'),x=att[i];
+    a.className='a'+(x?(x.t==='w'?' w':x.t==='x'?' x':' s'):(i===att.length&&!done?' cur':''));
+    a.textContent=x?(x.t==='s'?'Skipped':(x.t==='w'?'✓ ':'✗ ')+x.g):(i+1);A.appendChild(a)}
+  $('play').disabled=!meta;
+  $('info').textContent=err?err:!meta?'Loading song…':done?'Full 30s preview':'Clip '+Math.min(att.length+1,N())+'/'+N()+' · '+secs()+'s of audio';
+  $('ctl').style.display=done||!meta?'none':'block';
+  $('after').style.display=(done||mode==='prac'||err)&&(meta||err)?'flex':'none';
+  $('next').style.display=mode==='prac'||err?'':'none';
+  $('share').style.display=done?'':'none';
+  $('res').textContent=done?(won?'🎉 Got it in '+att.length+'! ':'It was ')+lab(T[era][idx]):'';
+  $('res').style.color=done&&won?'var(--ok)':'var(--ink)';
+  $('cover').style.display=done&&meta?'block':'none';if(done&&meta)$('cover').src=meta.artworkUrl100.replace('100x100','300x300');
+  const s=S.st;$('stats').innerHTML=[['Played',s.p],['Win %',s.p?Math.round(100*s.w/s.p):0],['Streak',s.s],['Best',s.b]].map(x=>'<div><b>'+x[1]+'</b>'+x[0]+'</div>').join('');
+}
+const setTh=th=>{const u=ART[th.dataset.k];th.style.backgroundImage=u?'url('+u+')':'';th.textContent=u?'':'🎵'};
+function showSug(){
+  const v=$('q').value.trim().toLowerCase(),box=$('sug');box.innerHTML='';clearTimeout(sugT);if(!v)return;
+  const hits=T[era].filter(s=>lab(s).toLowerCase().includes(v)).slice(0,6);
+  hits.forEach(s=>{
+    const b=document.createElement('button'),th=document.createElement('span'),tx=document.createElement('span');
+    b.className='sg';th.className='th';th.dataset.k=s;setTh(th);tx.textContent=lab(s);b.append(th,tx);
+    b.onclick=()=>{$('q').value=lab(s);box.innerHTML=''};box.appendChild(b)});
+  sugT=setTimeout(()=>{
+    const need=[...new Set(hits.filter(s=>!ART[s]).map(s=>s.split('|')[1]))].filter(a=>!artistDone.has(a));
+    Promise.all(need.map(fetchArt)).then(()=>box.querySelectorAll('.th').forEach(setTh));
+  },350);
+}
+$('q').oninput=showSug;
+$('play').onclick=()=>$('play').textContent==='■'?stopA():play();
+$('skip').onclick=()=>{if(done)return;stopA();att.push({t:'s'});if(att.length>=N())finish(false);else persist();render()};
+$('guess').onclick=()=>{
+  if(done)return;const v=$('q').value.trim().toLowerCase(),k=T[era].findIndex(s=>lab(s).toLowerCase()===v);
+  if(k<0){$('res').textContent='Pick a song from the suggestions.';$('res').style.color='var(--bad)';return}
+  stopA();
+  if(k===idx){att.push({t:'w',g:lab(T[era][k])});finish(true)}
+  else{att.push({t:'x',g:lab(T[era][k])});if(att.length>=N())finish(false);else persist()}
+  $('q').value='';$('sug').innerHTML='';render();
+};
+$('mDaily').onclick=()=>{mode='daily';loadSong()};
+$('mPrac').onclick=()=>{mode='prac';loadSong()};
+$('lBasic').onclick=()=>{if(lvl==='basic')return;stopA();lvl='basic';restore();render()};
+$('lHard').onclick=()=>{if(lvl==='hard')return;stopA();lvl='hard';restore();render()};
+$('next').onclick=()=>loadSong();
+$('share').onclick=()=>{
+  const sq=Array.from({length:N()},(_,i)=>att[i]?(att[i].t==='w'?'🟩':att[i].t==='x'?'🟥':'⬛'):'⬜').join('');
+  const txt='Tuneless '+(mode==='daily'?dayKey:'practice')+' · '+E.find(e=>e[0]===era)[1]+' · '+lvl+'\n'+sq;
+  try{navigator.clipboard.writeText(txt).then(()=>{$('share').textContent='Copied!'},()=>{$('res').textContent=txt})}catch(e){$('res').textContent=txt}
+};
+loadSong();
+</script>
+</body>
+</html>
