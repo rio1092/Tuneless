@@ -97,6 +97,7 @@ let S={days:{},st:{p:0,w:0,s:0,b:0}},ART={};
 try{const r=localStorage.getItem('tuneless-real2');if(r)S=JSON.parse(r)}catch(e){}
 try{ART=JSON.parse(localStorage.getItem('tl-art')||'{}')}catch(e){}
 let MC={};try{MC=JSON.parse(localStorage.getItem('tl-meta')||'{}')}catch(e){}
+let MISS={};try{MISS=JSON.parse(localStorage.getItem('tl-miss')||'{}')}catch(e){}
 const save=()=>{try{localStorage.setItem('tuneless-real2',JSON.stringify(S))}catch(e){}};
 const d0=new Date(),dayKey=d0.getFullYear()+'-'+(d0.getMonth()+1)+'-'+d0.getDate();
 let era='80s',mode='daily',lvl='basic',idx=0,meta=null,att=[],done=false,won=false,aud=null,tm,sugT,loadId=0,err='';
@@ -122,6 +123,7 @@ async function lookup(entry){
   const ok=(j.results||[]).filter(x=>x.previewUrl&&norm(x.trackName).includes(nt)&&!/karaoke|tribute|made famous|cover/i.test(x.trackName+x.collectionName));
   const hit=ok.find(x=>norm(x.artistName).includes(na))||null;
   if(hit){MC[entry]={previewUrl:hit.previewUrl,artworkUrl100:hit.artworkUrl100};try{localStorage.setItem('tl-meta',JSON.stringify(MC))}catch(e){}}
+  if(!hit){MISS[entry]=1;try{localStorage.setItem('tl-miss',JSON.stringify(MISS))}catch(e){}}
   return hit;
 }
 const artistDone=new Set();
@@ -144,15 +146,15 @@ async function loadSong(){
   const id=++loadId;stopA();meta=null;err='';render();
   const L=T[era],start=mode==='daily'?hash(dayKey+era)%L.length:Math.floor(Math.random()*L.length);
   try{
-    for(let i=0;i<L.length;i++){
-      const k=(start+i)%L.length;let m;try{m=await lookup(L[k])}catch(e){await new Promise(z=>setTimeout(z,1500));m=await lookup(L[k])}
+    for(let i=0;i<Math.min(L.length,10);i++){
+      const k=(start+i)%L.length;if(MISS[L[k]])continue;let m;try{m=await lookup(L[k])}catch(e){await new Promise(z=>setTimeout(z,2500));m=await lookup(L[k])}
       if(id!==loadId)return;
       if(m){idx=k;meta=m;break}
     }
   }catch(e){if(id!==loadId)return;err='Could not reach the iTunes API ('+e.message+'). Check your connection, turn off any VPN, iCloud Private Relay or content blocker, then tap Try again.'}
   if(id!==loadId)return;
   if(meta){aud=new Audio();aud.setAttribute('playsinline','');aud.setAttribute('webkit-playsinline','');aud.preload='auto';aud.src=meta.previewUrl.replace(/^http:/,'https:');aud.load();ART[T[era][idx]]=meta.artworkUrl100}
-  else if(!err)err='No previews found for this era.';
+  else if(!err)err='Could not load a song right now (Apple may be limiting requests). Wait a minute, then tap Try again.';
   restore();$('q').value='';$('sug').innerHTML='';render();
 }
 function stopA(){clearTimeout(tm);if(aud)aud.pause();const b=$('bar');b.style.transition='none';b.style.width='0';$('play').textContent='▶'}
